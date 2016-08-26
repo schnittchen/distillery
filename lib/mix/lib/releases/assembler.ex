@@ -276,6 +276,9 @@ defmodule Mix.Releases.Assembler do
     bootloader_path = Path.join(bin_dir, name)
     boot_path       = Path.join(rel_dir, "#{name}.sh")
     template_params = release.profile.overlay_vars
+    template_params =
+      template_params
+      |> Keyword.put(:cookie, generate_cookie())
 
     with :ok <- File.mkdir_p(bin_dir),
          :ok <- generate_nodetool(bin_dir),
@@ -484,7 +487,12 @@ defmodule Mix.Releases.Assembler do
   defp generate_vm_args(%Release{profile: %Profile{vm_args: nil}} = rel, rel_dir) do
     Logger.debug "Generating vm.args"
     overlay_vars = rel.profile.overlay_vars
-    with {:ok, contents} <- Utils.template("vm.args", overlay_vars),
+
+    template_params =
+      overlay_vars
+      |> Keyword.put(:cookie, generate_cookie())
+
+    with {:ok, contents} <- Utils.template("vm.args", template_params),
          :ok             <- File.write(Path.join(rel_dir, "vm.args"), contents),
       do: :ok
   end
@@ -495,6 +503,12 @@ defmodule Mix.Releases.Assembler do
          {:ok, templated} <- Overlays.template_file(path, overlay_vars),
          :ok              <- File.write(Path.join(rel_dir, "vm.args"), templated),
       do: :ok
+  end
+
+  defp generate_cookie do
+    # 255 is max. atom length, see http://erlang.org/doc/efficiency_guide/advanced.html
+    # Cookies, at least when read from disk, need to be from the printable ASCII range
+    (1..255)|> Enum.map(fn _ -> Enum.random(?\s..?~) end) |> List.to_atom
   end
 
   # Generates sys.config
