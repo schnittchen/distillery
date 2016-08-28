@@ -81,33 +81,37 @@ defmodule Mix.Tasks.Release.Init do
           {Keyword.get(mixfile.project, :app), :permanent}
         end)
       end)
-    no_doc? = Keyword.get(opts, :no_doc, false)
     release_per_app? = Keyword.get(opts, :release_per_app, false)
     if release_per_app? do
-      [no_docs: no_doc?,
-       releases: Enum.map(apps, fn {app, start_type} ->
+      [releases: Enum.map(apps, fn {app, start_type} ->
          [release_name: app,
           is_umbrella: false,
           release_applications: [{app, start_type}]]
        end)]
+      ++ get_common_bindings(opts)
     else
       release_name = String.replace(Path.basename(File.cwd!), "-", "_")
-      [no_docs: no_doc?,
-       releases: [
+      [releases: [
          [release_name: String.to_atom(release_name),
           is_umbrella: true,
           release_applications: apps]]]
+      ++ get_common_bindings(opts)
     end
   end
 
   @spec get_standard_bindings(Keyword.t) :: Keyword.t | no_return
   defp get_standard_bindings(opts) do
     app = Keyword.get(Mix.Project.config, :app)
-    no_doc? = Keyword.get(opts, :no_doc, false)
-    [no_docs: no_doc?,
-     releases: [
+    [releases: [
       [release_name: app,
        is_umbrella: false,
        release_applications: [{app, :permanent}]]]]
+    ++ get_common_bindings(opts)
+  end
+
+  @spec get_common_bindings(Keyword.t) :: Keyword.t
+  defp get_common_bindings(opts) do
+    no_doc? = Keyword.get(opts, :no_doc, false)
+    [no_docs: no_doc?]
   end
 end
