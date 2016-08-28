@@ -277,6 +277,12 @@ defmodule Mix.Releases.Assembler do
     boot_path       = Path.join(rel_dir, "#{name}.sh")
     template_params = release.profile.overlay_vars
 
+    if Atom.to_string(release.profile.cookie) |> String.contains?("insecure") do
+      Logger.warn "Attention! You have an insecure cookie for the erlang distribution " <>
+        "protocol inside rel/config.exs. Please generate a cookie that is not guessable " <>
+        "by a machine and replace the current cookie with it."
+    end
+
     with :ok <- File.mkdir_p(bin_dir),
          :ok <- generate_nodetool(bin_dir),
          {:ok, bootloader_contents} <- Utils.template(:boot_loader, template_params),
