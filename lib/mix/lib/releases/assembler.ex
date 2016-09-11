@@ -277,10 +277,29 @@ defmodule Mix.Releases.Assembler do
     boot_path       = Path.join(rel_dir, "#{name}.sh")
     template_params = release.profile.overlay_vars
 
-    if Atom.to_string(release.profile.cookie) |> String.contains?("insecure") do
-      Logger.warn "Attention! You have an insecure cookie for the erlang distribution " <>
-        "protocol inside rel/config.exs. Please generate a cookie that is not guessable " <>
-        "by a machine and replace the current cookie with it."
+    template_release = Keyword.get(template_params, :release)
+    template_cookie = template_release.profile.cookie
+    cond do
+      !template_cookie ->
+        Logger.warn "Attention! You did not provide a cookie for the erlang distribution " <>
+          "protocol inside rel/config.exs. For backwards compatibility, the release name " <>
+          "will be used as cookie, which is potentially a security risk! " <>
+          "Please generate a cookie that is not guessable " <>
+          "by a machine and place it inside rel/config.exs. " <>
+          "This will be an error in a future release."
+
+        release_with_cookie =
+          %{ template_release |
+            profile: %{ template_release.profile | cookie: template_release.name }
+          }
+        template_params =
+          template_params
+          |> Keyword.put(:release, release_with_cookie)
+      String.contains?(Atom.to_string(release.profile.cookie), "insecure") ->
+        Logger.warn "Attention! You have an insecure cookie for the erlang distribution " <>
+          "protocol inside rel/config.exs, probably because a secure cookie could not " <>
+          "be automatically generated. Please generate a cookie that is not guessable " <>
+          "by a machine and replace the current cookie with it."
     end
 
     with :ok <- File.mkdir_p(bin_dir),
